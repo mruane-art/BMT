@@ -221,7 +221,8 @@ export async function POST(req: NextRequest) {
     if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
       const rawText = await extractTextFromPdf(bytes);
       const mapped = extractFromPdfText(rawText);
-      return NextResponse.json(mapped);
+      // Temporary: include raw text so we can see the PDF format
+      return NextResponse.json({ ...mapped, _rawText: rawText.slice(0, 3000) });
     }
 
     const text = new TextDecoder().decode(bytes);
