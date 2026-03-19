@@ -53,7 +53,13 @@ async function blobGetAll(): Promise<Listing[]> {
 }
 
 async function blobWriteAll(listings: Listing[]): Promise<void> {
-  const { put } = await import('@vercel/blob');
+  const { put, list, del } = await import('@vercel/blob');
+  // Delete all existing listings.json blobs first — Vercel Blob keeps old
+  // versions when addRandomSuffix:false is used, causing stale reads.
+  const { blobs } = await list({ prefix: LISTINGS_BLOB_PATH });
+  if (blobs.length > 0) {
+    await del(blobs.map((b) => b.url));
+  }
   await put(LISTINGS_BLOB_PATH, JSON.stringify(listings, null, 2), {
     access: 'public',
     contentType: 'application/json',
