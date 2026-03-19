@@ -4,7 +4,7 @@ import { Listing } from '@/types/listing';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function GET() {
-  const listings = getAllListings();
+  const listings = await getAllListings();
   return NextResponse.json(listings);
 }
 
@@ -58,6 +58,6 @@ export async function POST(req: NextRequest) {
     annualTaxes: body.annualTaxes ? Number(body.annualTaxes) : undefined,
   };
 
-  saveListing(listing);
+  await saveListing(listing);
   return NextResponse.json(listing, { status: 201 });
 }

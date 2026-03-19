@@ -18,7 +18,7 @@ function formatSqft(sqft: number) {
 
 export default async function ListingPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const listing = getListingBySlug(slug);
+  const listing = await getListingBySlug(slug);
   if (!listing) notFound();
 
   const fullAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`;
