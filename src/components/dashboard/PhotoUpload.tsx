@@ -11,18 +11,28 @@ interface PhotoUploadProps {
 
 export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       setUploading(true);
+      setUploadError('');
       try {
         const formData = new FormData();
         acceptedFiles.forEach((f) => formData.append('files', f));
         const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (!res.ok) {
+          setUploadError('Upload failed. Make sure the server is running and try again.');
+          return;
+        }
         const data = await res.json();
+        if (!data.urls || data.urls.length === 0) {
+          setUploadError('No photos were saved. Please try again.');
+          return;
+        }
         onChange([...photos, ...data.urls]);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setUploadError('Upload failed. Check your connection and try again.');
       } finally {
         setUploading(false);
       }
@@ -52,7 +62,7 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-          isDragActive ? 'border-amber-400 bg-amber-50' : 'border-gray-300 hover:border-amber-400 hover:bg-gray-50'
+          isDragActive ? 'border-amber-400 bg-amber-50' : uploadError ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-amber-400 hover:bg-gray-50'
         }`}
       >
         <input {...getInputProps()} />
@@ -71,6 +81,10 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
           </div>
         )}
       </div>
+
+      {uploadError && (
+        <p className="text-sm text-red-600 text-center">{uploadError}</p>
+      )}
 
       {photos.length > 0 && (
         <div>

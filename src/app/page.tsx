@@ -44,21 +44,29 @@ export default function Dashboard() {
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
   const handleCreate = async (data: FormData) => {
-    await fetch('/api/listings', {
+    const res = await fetch('/api/listings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      alert('Failed to save listing. Please try again.');
+      return;
+    }
     setModal(null);
     fetchListings();
   };
 
   const handleEdit = async (id: string, data: FormData) => {
-    await fetch(`/api/listings/${id}`, {
+    const res = await fetch(`/api/listings/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    if (!res.ok) {
+      alert('Failed to save changes. Please try again.');
+      return;
+    }
     setModal(null);
     fetchListings();
   };

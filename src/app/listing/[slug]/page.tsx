@@ -1,14 +1,12 @@
-import { getListingBySlug, getAllListings } from '@/lib/storage';
+import { getListingBySlug } from '@/lib/storage';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Gallery from '@/components/listing/Gallery';
 import MapEmbed from '@/components/listing/MapEmbed';
 import ShowingRequestForm from '@/components/listing/ShowingRequestForm';
 
-export async function generateStaticParams() {
-  const listings = getAllListings();
-  return listings.map((l) => ({ slug: l.slug }));
-}
+// Always render dynamically so newly created listings are immediately accessible
+export const dynamic = 'force-dynamic';
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(price);
@@ -24,7 +22,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
   if (!listing) notFound();
 
   const fullAddress = `${listing.address}, ${listing.city}, ${listing.state} ${listing.zip}`;
-  const heroPhoto = listing.photos?.[0] || '/placeholder-home.jpg';
+  const heroPhoto = listing.photos?.[0] || null;
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -52,14 +50,16 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
       </nav>
 
       {/* Hero Section */}
-      <section className="relative w-full" style={{ height: '100vh', minHeight: 600 }}>
-        <Image
-          src={heroPhoto}
-          alt={fullAddress}
-          fill
-          className="object-cover"
-          priority
-        />
+      <section className="relative w-full" style={{ height: '100vh', minHeight: 600, backgroundColor: '#1a2744' }}>
+        {heroPhoto ? (
+          <Image
+            src={heroPhoto}
+            alt={fullAddress}
+            fill
+            className="object-cover"
+            priority
+          />
+        ) : null}
         {/* Gradient overlay */}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.65) 100%)' }} />
 
