@@ -3,7 +3,7 @@ import path from 'path';
 import { Listing } from '@/types/listing';
 
 // ---------------------------------------------------------------------------
-// Local file-based storage (used when POSTGRES_URL is not set — local dev)
+// Local file-based storage (used when BLOB_READ_WRITE_TOKEN is not set)
 // ---------------------------------------------------------------------------
 
 const DATA_FILE = path.join(process.cwd(), 'data', 'listings.json');
@@ -33,91 +33,73 @@ function fileDelete(id: string): void {
 }
 
 // ---------------------------------------------------------------------------
-// Vercel Postgres storage (used when POSTGRES_URL is set — Vercel deployment)
+// Vercel Blob storage for listings (used when BLOB_READ_WRITE_TOKEN is set)
+// Stores the full listings array as a single JSON file in Blob.
 // ---------------------------------------------------------------------------
 
-async function pgEnsureTable() {
-  const { sql } = await import('@vercel/postgres');
-  await sql`
-    CREATE TABLE IF NOT EXISTS listings (
-      id   TEXT PRIMARY KEY,
-      slug TEXT UNIQUE NOT NULL,
-      data JSONB NOT NULL
-    )
-  `;
+const LISTINGS_BLOB_PATH = 'data/listings.json';
+
+async function blobGetAll(): Promise<Listing[]> {
+  try {
+    const { list } = await import('@vercel/blob');
+    const { blobs } = await list({ prefix: LISTINGS_BLOB_PATH });
+    const blob = blobs.find((b) => b.pathname === LISTINGS_BLOB_PATH);
+    if (!blob) return [];
+    const res = await fetch(blob.url, { cache: 'no-store' });
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
-async function pgGetAll(): Promise<Listing[]> {
-  const { sql } = await import('@vercel/postgres');
-  await pgEnsureTable();
-  const result = await sql`
-    SELECT data FROM listings
-    ORDER BY (data->>'createdAt') DESC
-  `;
-  return result.rows.map((r) => r.data as Listing);
-}
-
-async function pgGetById(id: string): Promise<Listing | null> {
-  const { sql } = await import('@vercel/postgres');
-  await pgEnsureTable();
-  const result = await sql`SELECT data FROM listings WHERE id = ${id}`;
-  return (result.rows[0]?.data as Listing) ?? null;
-}
-
-async function pgGetBySlug(slug: string): Promise<Listing | null> {
-  const { sql } = await import('@vercel/postgres');
-  await pgEnsureTable();
-  const result = await sql`SELECT data FROM listings WHERE slug = ${slug}`;
-  return (result.rows[0]?.data as Listing) ?? null;
-}
-
-async function pgSave(listing: Listing): Promise<void> {
-  const { sql } = await import('@vercel/postgres');
-  await pgEnsureTable();
-  const jsonStr = JSON.stringify(listing);
-  await sql`
-    INSERT INTO listings (id, slug, data)
-    VALUES (${listing.id}, ${listing.slug}, ${jsonStr})
-    ON CONFLICT (id) DO UPDATE SET
-      slug = ${listing.slug},
-      data = ${jsonStr}
-  `;
-}
-
-async function pgDelete(id: string): Promise<void> {
-  const { sql } = await import('@vercel/postgres');
-  await pgEnsureTable();
-  await sql`DELETE FROM listings WHERE id = ${id}`;
+async function blobWriteAll(listings: Listing[]): Promise<void> {
+  const { put } = await import('@vercel/blob');
+  await put(LISTINGS_BLOB_PATH, JSON.stringify(listings, null, 2), {
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+  });
 }
 
 // ---------------------------------------------------------------------------
-// Public async API — automatically uses Postgres on Vercel, files locally
+// Public async API — uses Blob on Vercel, local JSON file in dev
 // ---------------------------------------------------------------------------
 
-const usePostgres = () => !!process.env.POSTGRES_URL;
+const useBlob = () => !!process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function getAllListings(): Promise<Listing[]> {
-  if (usePostgres()) return pgGetAll();
+  if (useBlob()) return blobGetAll();
   return fileGetAll();
 }
 
 export async function getListingById(id: string): Promise<Listing | null> {
-  if (usePostgres()) return pgGetById(id);
-  return fileGetAll().find((l) => l.id === id) ?? null;
+  const listings = await getAllListings();
+  return listings.find((l) => l.id === id) ?? null;
 }
 
 export async function getListingBySlug(slug: string): Promise<Listing | null> {
-  if (usePostgres()) return pgGetBySlug(slug);
-  return fileGetAll().find((l) => l.slug === slug) ?? null;
+  const listings = await getAllListings();
+  return listings.find((l) => l.slug === slug) ?? null;
 }
 
 export async function saveListing(listing: Listing): Promise<void> {
-  if (usePostgres()) return pgSave(listing);
+  if (useBlob()) {
+    const listings = await blobGetAll();
+    const idx = listings.findIndex((l) => l.id === listing.id);
+    if (idx >= 0) listings[idx] = listing;
+    else listings.unshift(listing);
+    await blobWriteAll(listings);
+    return;
+  }
   fileSave(listing);
 }
 
 export async function deleteListing(id: string): Promise<void> {
-  if (usePostgres()) return pgDelete(id);
+  if (useBlob()) {
+    const listings = await blobGetAll();
+    await blobWriteAll(listings.filter((l) => l.id !== id));
+    return;
+  }
   fileDelete(id);
 }
 
