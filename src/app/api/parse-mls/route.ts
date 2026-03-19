@@ -253,10 +253,34 @@ function extractFromPdfText(rawText: string): Record<string, string> {
     }
   }
 
-  // Strategy 4: longest prose block as description
+  // Strategy 4: extract Public Remarks / Remarks section (multi-line)
   if (!result.description) {
-    const longLines = lines.filter((l) => l.length > 80 && /[a-z]{4,}/.test(l));
-    if (longLines.length > 0) result.description = longLines.slice(0, 6).join(' ');
+    // Find the line that is just the section label, then collect lines until next section
+    const remarksLabelIdx = lines.findIndex((l) =>
+      /^(public\s+remarks?|remarks?|marketing\s+remarks?)\s*:?\s*$/i.test(l)
+    );
+    if (remarksLabelIdx >= 0) {
+      const remarksLines: string[] = [];
+      for (let i = remarksLabelIdx + 1; i < lines.length; i++) {
+        // Stop at the next section header (short line followed by known keywords, or all-caps header)
+        if (/^(showing\s+info|directions?|agent\s+remarks?|private\s+remarks?|rooms?|building|taxes?|schools?|location|association|financial|features?|utilities?|hoa)\b/i.test(lines[i])) break;
+        if (lines[i].length < 4) break;
+        remarksLines.push(lines[i]);
+      }
+      if (remarksLines.length > 0) result.description = remarksLines.join(' ').trim();
+    }
+
+    // Fallback: "Public Remarks: text on same line then continues"
+    if (!result.description) {
+      const remarksMatch = fullText.match(/public\s+remarks?\s*:\s*([\s\S]+?)(?=\n[A-Z][a-z]+\s+(?:Info|Details|Remarks?)|\n\n|$)/i);
+      if (remarksMatch?.[1]) result.description = remarksMatch[1].replace(/\s+/g, ' ').trim();
+    }
+
+    // Last resort: longest prose block
+    if (!result.description) {
+      const longLines = lines.filter((l) => l.length > 80 && /[a-z]{4,}/.test(l));
+      if (longLines.length > 0) result.description = longLines.slice(0, 6).join(' ');
+    }
   }
 
   return result;
