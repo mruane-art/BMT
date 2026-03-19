@@ -1,19 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Papa from 'papaparse';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-
-// Disable worker in Node.js environment
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer), useWorkerFetch: false, isEvalSupported: false, useSystemFonts: true }).promise;
-  const pages: string[] = [];
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    pages.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '));
-  }
-  return pages.join('\n');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const PDFParser = require('pdf2json');
+  return new Promise((resolve, reject) => {
+    const parser = new PDFParser();
+    parser.on('pdfParser_dataError', (err: { parserError: Error }) => reject(err.parserError));
+    parser.on('pdfParser_dataReady', (data: { Pages: Array<{ Texts: Array<{ R: Array<{ T: string }> }> }> }) => {
+      const lines: string[] = [];
+      for (const page of data.Pages ?? []) {
+        for (const textBlock of page.Texts ?? []) {
+          const decoded = textBlock.R?.map((r) => decodeURIComponent(r.T)).join('') ?? '';
+          if (decoded.trim()) lines.push(decoded.trim());
+        }
+      }
+      resolve(lines.join('\n'));
+    });
+    parser.parseBuffer(Buffer.from(buffer));
+  });
 }
 
 // Same field map as MLSImport.tsx — normalizes MLS headers to our internal field names
