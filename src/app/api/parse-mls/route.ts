@@ -7,15 +7,40 @@ async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
   return new Promise((resolve, reject) => {
     const parser = new PDFParser();
     parser.on('pdfParser_dataError', (err: { parserError: Error }) => reject(err.parserError));
-    parser.on('pdfParser_dataReady', (data: { Pages: Array<{ Texts: Array<{ R: Array<{ T: string }> }> }> }) => {
-      const lines: string[] = [];
+    parser.on('pdfParser_dataReady', (data: {
+      Pages: Array<{ Texts: Array<{ x: number; y: number; R: Array<{ T: string }> }> }>
+    }) => {
+      const allLines: string[] = [];
+
       for (const page of data.Pages ?? []) {
-        for (const textBlock of page.Texts ?? []) {
-          const decoded = textBlock.R?.map((r) => decodeURIComponent(r.T)).join('') ?? '';
-          if (decoded.trim()) lines.push(decoded.trim());
+        // Group text fragments by y-coordinate (round to 1dp so nearby items merge)
+        const lineMap = new Map<string, Array<{ x: number; text: string }>>();
+        for (const block of page.Texts ?? []) {
+          const text = block.R?.map((r) => decodeURIComponent(r.T)).join('') ?? '';
+          if (!text.trim()) continue;
+          const yKey = block.y.toFixed(1);
+          if (!lineMap.has(yKey)) lineMap.set(yKey, []);
+          lineMap.get(yKey)!.push({ x: block.x, text });
+        }
+
+        // Reconstruct each line: sort fragments by x, add a space only when there
+        // is a meaningful gap between fragments (word boundary vs adjacent letters)
+        const sortedYs = Array.from(lineMap.keys()).sort((a, b) => parseFloat(a) - parseFloat(b));
+        for (const yKey of sortedYs) {
+          const items = lineMap.get(yKey)!.sort((a, b) => a.x - b.x);
+          let line = '';
+          for (let i = 0; i < items.length; i++) {
+            if (i > 0) {
+              const gap = items[i].x - (items[i - 1].x + items[i - 1].text.length * 0.35);
+              if (gap > 1.2) line += ' ';
+            }
+            line += items[i].text;
+          }
+          if (line.trim()) allLines.push(line.trim());
         }
       }
-      resolve(lines.join('\n'));
+
+      resolve(allLines.join('\n'));
     });
     parser.parseBuffer(Buffer.from(buffer));
   });
@@ -158,28 +183,48 @@ function extractFromPdfText(rawText: string): Record<string, string> {
   // Strategy 2: regex patterns for common MLS fields
   const fullText = rawText;
   const patterns: Array<[RegExp, string]> = [
+    // Price — handles "$915,000" and "915000"
+    [/\$\s*([\d,]+)\s*\n/m, 'price'],
     [/list\s*price[:\s]+\$?([\d,]+)/i, 'price'],
-    [/price[:\s]+\$?([\d,]+)/i, 'price'],
-    [/beds?[:\s]+(\d+)/i, 'bedrooms'],
-    [/bedrooms?[:\s]+(\d+)/i, 'bedrooms'],
-    [/baths?[:\s]+([\d.]+)/i, 'bathrooms'],
-    [/bathrooms?[:\s]+([\d.]+)/i, 'bathrooms'],
-    [/sq\.?\s*ft\.?[:\s]+([\d,]+)/i, 'sqft'],
-    [/square\s*feet[:\s]+([\d,]+)/i, 'sqft'],
-    [/year\s+built[:\s]+(\d{4})/i, 'yearBuilt'],
-    [/yr\.?\s+built[:\s]+(\d{4})/i, 'yearBuilt'],
-    [/mls\s*#?[:\s]+([A-Z0-9-]+)/i, 'mlsNumber'],
-    [/lot\s+size[:\s]+([^\n]+)/i, 'lotSize'],
-    [/garage[:\s]+([^\n]+)/i, 'garage'],
-    [/hoa\s+fee[:\s]+\$?([\d,.]+)/i, 'hoaFee'],
-    [/annual\s+taxes?[:\s]+\$?([\d,.]+)/i, 'annualTaxes'],
-    [/elementary\s+school[:\s]+([^\n]+)/i, 'elementarySchool'],
-    [/middle\s+school[:\s]+([^\n]+)/i, 'middleSchool'],
-    [/high\s+school[:\s]+([^\n]+)/i, 'highSchool'],
-    [/subdivision[:\s]+([^\n]+)/i, 'neighborhood'],
-    [/city[:\s]+([A-Za-z\s]+)/i, 'city'],
-    [/state[:\s]+([A-Za-z]{2})/i, 'state'],
-    [/zip(?:\s*code)?[:\s]+(\d{5})/i, 'zip'],
+    [/asking\s*price[:\s]+\$?([\d,]+)/i, 'price'],
+    // Beds / Baths
+    [/beds?\s*:\s*(\d+)/i, 'bedrooms'],
+    [/bedrooms?\s*:\s*(\d+)/i, 'bedrooms'],
+    [/baths?\s*:\s*([\d.]+)/i, 'bathrooms'],
+    [/full\s*baths?\s*:\s*(\d+)/i, 'bathrooms'],
+    // Sqft — "Above Grade Fin SQFT: 3,870" or "Total Fin SQFT: 3,870"
+    [/above\s+grade\s+fin\s+sqft\s*:\s*([\d,]+)/i, 'sqft'],
+    [/total\s+fin\s+sqft\s*:\s*([\d,]+)/i, 'sqft'],
+    [/sq\.?\s*ft\.?\s*:\s*([\d,]+)/i, 'sqft'],
+    [/square\s*feet\s*:\s*([\d,]+)/i, 'sqft'],
+    [/living\s+area\s*:\s*([\d,]+)/i, 'sqft'],
+    // Year built
+    [/year\s+built\s*:\s*(\d{4})/i, 'yearBuilt'],
+    [/yr\.?\s+built\s*:\s*(\d{4})/i, 'yearBuilt'],
+    // MLS number — "MLS #: PACT2118480"
+    [/mls\s*#\s*:\s*([A-Z0-9-]+)/i, 'mlsNumber'],
+    [/mls\s+number\s*:\s*([A-Z0-9-]+)/i, 'mlsNumber'],
+    [/listing\s+id\s*:\s*([A-Z0-9-]+)/i, 'mlsNumber'],
+    // Lot / Garage / Stories
+    [/lot\s+size\s*:\s*([^\n]+)/i, 'lotSize'],
+    [/garage\s*:\s*([^\n]+)/i, 'garage'],
+    [/levels?\s*\/?\s*stories\s*:\s*(\d+)/i, 'stories'],
+    // HOA — "HOA Fee: $165 / Monthly"
+    [/hoa\s+fee\s*:\s*\$?([\d,.]+)/i, 'hoaFee'],
+    [/association\s+fee\s*:\s*\$?([\d,.]+)/i, 'hoaFee'],
+    // Taxes — "Tax Annual Amt / Year: $13,449 / 2025"
+    [/tax\s+annual\s+amt[^:]*:\s*\$?([\d,]+)/i, 'annualTaxes'],
+    [/annual\s+taxes?\s*:\s*\$?([\d,]+)/i, 'annualTaxes'],
+    // Schools
+    [/elementary\s+school\s*:\s*([^\n]+)/i, 'elementarySchool'],
+    [/middle\s+school\s*:\s*([^\n]+)/i, 'middleSchool'],
+    [/high\s+school\s*:\s*([^\n]+)/i, 'highSchool'],
+    [/school\s+district\s*:\s*([^\n]+)/i, 'elementarySchool'],
+    // Location
+    [/subdiv\s*\/\s*neigh\s*:\s*([^\n]+)/i, 'neighborhood'],
+    [/subdivision\s*:\s*([^\n]+)/i, 'neighborhood'],
+    [/county\s*:\s*([A-Za-z\s]+?)(?:,|\n)/i, 'county'],
+    [/zip(?:\s*code)?\s*:\s*(\d{5})/i, 'zip'],
   ];
   for (const [pattern, field] of patterns) {
     if (result[field]) continue;
@@ -221,8 +266,7 @@ export async function POST(req: NextRequest) {
     if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
       const rawText = await extractTextFromPdf(bytes);
       const mapped = extractFromPdfText(rawText);
-      // Temporary: include raw text so we can see the PDF format
-      return NextResponse.json({ ...mapped, _rawText: rawText.slice(0, 3000) });
+      return NextResponse.json(mapped);
     }
 
     const text = new TextDecoder().decode(bytes);
