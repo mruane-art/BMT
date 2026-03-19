@@ -72,6 +72,7 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
     agentPhone: '',
     agentEmail: '',
     agentPhoto: '',
+    agentTeam: '',
     brokerageName: '',
     mlsNumber: '',
     elementarySchool: '',
@@ -110,6 +111,7 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
       agentName: data.agentName || prev.agentName,
       agentPhone: data.agentPhone || prev.agentPhone,
       agentEmail: data.agentEmail || prev.agentEmail,
+      agentTeam: data.agentTeam || prev.agentTeam,
       brokerageName: data.brokerageName || prev.brokerageName,
       mlsNumber: data.mlsNumber || prev.mlsNumber,
       elementarySchool: data.elementarySchool || prev.elementarySchool,
@@ -355,6 +357,9 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
             <Field label="Agent Name" required>
               <input className={inputCls} value={form.agentName} onChange={(e) => set('agentName', e.target.value)} placeholder="Jane Realtor" />
             </Field>
+            <Field label="Team Name">
+              <input className={inputCls} value={form.agentTeam || ''} onChange={(e) => set('agentTeam', e.target.value)} placeholder="The Smith Team" />
+            </Field>
             <Field label="Brokerage Name">
               <input className={inputCls} value={form.brokerageName || ''} onChange={(e) => set('brokerageName', e.target.value)} placeholder="ABC Realty" />
             </Field>
@@ -364,8 +369,42 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
             <Field label="Email">
               <input className={inputCls} type="email" value={form.agentEmail} onChange={(e) => set('agentEmail', e.target.value)} placeholder="agent@brokerage.com" />
             </Field>
-            <Field label="Agent Photo URL">
-              <input className={inputCls} type="url" value={form.agentPhoto || ''} onChange={(e) => set('agentPhoto', e.target.value)} placeholder="https://…/headshot.jpg" />
+            <Field label="Agent Photo">
+              <div className="flex items-center gap-3">
+                {form.agentPhoto && (
+                  <img src={form.agentPhoto} alt="Agent" className="w-14 h-14 rounded-full object-cover border border-gray-200 shrink-0" />
+                )}
+                <div className="flex flex-col gap-2 flex-1">
+                  <label
+                    className="cursor-pointer inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition"
+                    style={{ width: 'fit-content' }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4" />
+                    </svg>
+                    Upload Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('files', file);
+                        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+                        const { urls } = await res.json();
+                        if (urls?.[0]) set('agentPhoto', urls[0]);
+                      }}
+                    />
+                  </label>
+                  {form.agentPhoto && (
+                    <button type="button" className="text-xs text-red-400 hover:text-red-600 text-left" onClick={() => set('agentPhoto', '')}>
+                      Remove photo
+                    </button>
+                  )}
+                </div>
+              </div>
             </Field>
           </div>
         </Section>

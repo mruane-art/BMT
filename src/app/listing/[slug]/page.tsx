@@ -248,6 +248,7 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
                 )}
                 <div>
                   <h3 className="font-bold text-gray-900">{listing.agentName}</h3>
+                  {listing.agentTeam && <p className="text-sm font-medium" style={{ color: '#c9a84c' }}>{listing.agentTeam}</p>}
                   {listing.brokerageName && <p className="text-sm text-gray-500">{listing.brokerageName}</p>}
                 </div>
               </div>

@@ -46,6 +46,7 @@ export interface Listing {
   agentPhone: string;
   agentEmail: string;
   agentPhoto?: string;
+  agentTeam?: string;
   brokerageName?: string;
 
   // MLS

@@ -190,8 +190,11 @@ function extractFromPdfText(rawText: string): Record<string, string> {
     // Beds / Baths
     [/beds?\s*:\s*(\d+)/i, 'bedrooms'],
     [/bedrooms?\s*:\s*(\d+)/i, 'bedrooms'],
-    [/baths?\s*:\s*([\d.]+)/i, 'bathrooms'],
+    // "Baths: 3 / 0" or "Baths: 3" — capture full baths before the slash
+    [/baths?\s*:\s*(\d+)\s*\//i, 'bathrooms'],
+    [/baths?\s*:\s*(\d+)/i, 'bathrooms'],
     [/full\s*baths?\s*:\s*(\d+)/i, 'bathrooms'],
+    [/baths?\s+full\s*:\s*(\d+)/i, 'bathrooms'],
     // Sqft — "Above Grade Fin SQFT: 3,870" or "Total Fin SQFT: 3,870"
     [/above\s+grade\s+fin\s+sqft\s*:\s*([\d,]+)/i, 'sqft'],
     [/total\s+fin\s+sqft\s*:\s*([\d,]+)/i, 'sqft'],
@@ -232,13 +235,21 @@ function extractFromPdfText(rawText: string): Record<string, string> {
     if (m?.[1]) result[field] = m[1].trim();
   }
 
-  // Strategy 3: first line that looks like a street address
-  if (!result.address) {
-    for (const line of lines) {
-      if (/^\d+\s+[A-Za-z]/.test(line) && line.length < 100) {
+  // Strategy 3: find address line and extract city/state/zip from it if present
+  // Handles "132 Violet Way, Spring City, PA 19475" all on one line
+  for (const line of lines) {
+    if (/^\d+\s+[A-Za-z]/.test(line) && line.length < 120) {
+      // Try to parse "Street, City, ST 12345" format
+      const addrMatch = line.match(/^(.+?),\s*(.+?),\s*([A-Z]{2})\s+(\d{5})/);
+      if (addrMatch) {
+        if (!result.address) result.address = addrMatch[1].trim();
+        if (!result.city) result.city = addrMatch[2].trim();
+        if (!result.state) result.state = addrMatch[3].trim();
+        if (!result.zip) result.zip = addrMatch[4].trim();
+      } else if (!result.address) {
         result.address = line;
-        break;
       }
+      break;
     }
   }
 
