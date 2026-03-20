@@ -1,6 +1,5 @@
 import { getListingBySlug } from '@/lib/storage';
 import { notFound } from 'next/navigation';
-import Image from 'next/image';
 import Gallery from '@/components/listing/Gallery';
 import MapEmbed from '@/components/listing/MapEmbed';
 import ShowingRequestForm from '@/components/listing/ShowingRequestForm';
@@ -52,13 +51,8 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
       {/* Hero Section */}
       <section className="relative w-full" style={{ height: '100vh', minHeight: 600, backgroundColor: '#1a2744' }}>
         {heroPhoto ? (
-          <Image
-            src={heroPhoto}
-            alt={fullAddress}
-            fill
-            className="object-cover"
-            priority
-          />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={heroPhoto} alt={fullAddress} className="absolute inset-0 w-full h-full object-cover" />
         ) : null}
         {/* Gradient overlay */}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,0.65) 100%)' }} />
@@ -231,12 +225,11 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
               <div className="flex items-center gap-4 mb-4">
                 {listing.agentPhoto ? (
-                  <Image
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
                     src={listing.agentPhoto}
                     alt={listing.agentName}
-                    width={64}
-                    height={64}
-                    className="rounded-full object-cover border-2 border-amber-400"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-amber-400 flex-shrink-0"
                   />
                 ) : (
                   <div

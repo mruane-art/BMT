@@ -390,11 +390,20 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-                        const fd = new FormData();
-                        fd.append('files', file);
-                        const res = await fetch('/api/upload', { method: 'POST', body: fd });
-                        const { urls } = await res.json();
-                        if (urls?.[0]) set('agentPhoto', urls[0]);
+                        const img = document.createElement('img');
+                        const objectUrl = URL.createObjectURL(file);
+                        img.onload = () => {
+                          const size = 400;
+                          const scale = Math.min(size / img.width, size / img.height, 1);
+                          const w = Math.round(img.width * scale);
+                          const h = Math.round(img.height * scale);
+                          const canvas = document.createElement('canvas');
+                          canvas.width = w; canvas.height = h;
+                          canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
+                          URL.revokeObjectURL(objectUrl);
+                          set('agentPhoto', canvas.toDataURL('image/jpeg', 0.85));
+                        };
+                        img.src = objectUrl;
                       }}
                     />
                   </label>

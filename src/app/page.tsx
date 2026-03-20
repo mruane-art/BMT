@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Listing } from '@/types/listing';
 import ListingForm from '@/components/dashboard/ListingForm';
 
@@ -176,7 +175,8 @@ export default function Dashboard() {
                 {/* Photo */}
                 <div className="relative bg-gray-200" style={{ height: 200 }}>
                   {listing.photos?.[0] ? (
-                    <Image src={listing.photos[0]} alt={listing.address} fill className="object-cover group-hover:scale-105 transition duration-500" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={listing.photos[0]} alt={listing.address} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                       <span className="text-5xl">🏠</span>
@@ -238,7 +238,8 @@ export default function Dashboard() {
               <div key={listing.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center gap-5 hover:shadow-md transition">
                 <div className="relative flex-shrink-0 rounded-lg overflow-hidden bg-gray-200" style={{ width: 80, height: 60 }}>
                   {listing.photos?.[0] ? (
-                    <Image src={listing.photos[0]} alt={listing.address} fill className="object-cover" />
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={listing.photos[0]} alt={listing.address} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400 text-2xl">🏠</div>
                   )}

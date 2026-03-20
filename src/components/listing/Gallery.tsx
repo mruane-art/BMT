@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 
 interface GalleryProps {
   photos: string[];
@@ -20,11 +19,12 @@ export default function Gallery({ photos, address }: GalleryProps) {
     <section className="bg-white" id="gallery">
       {/* Main large photo */}
       <div
-        className="relative w-full cursor-zoom-in"
+        className="relative w-full cursor-zoom-in overflow-hidden"
         style={{ height: '520px' }}
         onClick={() => setLightboxOpen(true)}
       >
-        <Image src={main} alt={address} fill className="object-cover" priority />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={main} alt={address} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
         <button
           className="absolute bottom-4 right-4 bg-white/90 text-gray-800 px-4 py-2 rounded text-sm font-medium shadow hover:bg-white transition"
@@ -46,7 +46,8 @@ export default function Gallery({ photos, address }: GalleryProps) {
               }`}
               style={{ width: 100, height: 72 }}
             >
-              <Image src={photo} alt={`Photo ${idx + 1}`} fill className="object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo} alt={`Photo ${idx + 1}`} className="absolute inset-0 w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -70,8 +71,13 @@ export default function Gallery({ photos, address }: GalleryProps) {
           >
             ‹
           </button>
-          <div className="relative" style={{ width: '80vw', height: '80vh' }} onClick={(e) => e.stopPropagation()}>
-            <Image src={main} alt={address} fill className="object-contain" />
+          <div
+            className="relative flex items-center justify-center"
+            style={{ width: '80vw', height: '80vh' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={main} alt={address} className="max-w-full max-h-full object-contain" />
           </div>
           <button
             className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-5xl font-light hover:text-amber-400 transition px-4"
