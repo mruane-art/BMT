@@ -9,7 +9,7 @@ interface PhotoUploadProps {
 }
 
 /** Resize & compress an image file to a JPEG data URL. */
-function compressImage(file: File, maxWidth = 1400, quality = 0.72): Promise<string> {
+function compressImage(file: File, maxWidth = 1200, quality = 0.65): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = document.createElement('img');
     const objectUrl = URL.createObjectURL(file);
