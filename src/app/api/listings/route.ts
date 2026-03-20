@@ -59,6 +59,11 @@ export async function POST(req: NextRequest) {
     annualTaxes: body.annualTaxes ? Number(body.annualTaxes) : undefined,
   };
 
-  await saveListing(listing);
+  try {
+    await saveListing(listing);
+  } catch (err) {
+    console.error('[POST /api/listings] saveListing failed:', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
   return NextResponse.json(listing, { status: 201 });
 }

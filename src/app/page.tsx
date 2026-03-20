@@ -49,7 +49,8 @@ export default function Dashboard() {
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      alert('Failed to save listing. Please try again.');
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed to save listing (HTTP ${res.status}).\n\n${body.error || 'Please try again.'}`);
       return;
     }
     setModal(null);
@@ -63,7 +64,8 @@ export default function Dashboard() {
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      alert('Failed to save changes. Please try again.');
+      const body = await res.json().catch(() => ({}));
+      alert(`Failed to save changes (HTTP ${res.status}).\n\n${body.error || 'Please try again.'}`);
       return;
     }
     setModal(null);

@@ -15,7 +15,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const body = await req.json();
   const updated = { ...existing, ...body, id, updatedAt: new Date().toISOString() };
-  await saveListing(updated);
+  try {
+    await saveListing(updated);
+  } catch (err) {
+    console.error('[PUT /api/listings] saveListing failed:', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
   return NextResponse.json(updated);
 }
 
