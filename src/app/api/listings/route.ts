@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     agentPhoto: body.agentPhoto,
     agentTeam: body.agentTeam,
     brokerageName: body.brokerageName,
+    schedulingUrl: body.schedulingUrl,
     mlsNumber: body.mlsNumber,
     elementarySchool: body.elementarySchool,
     middleSchool: body.middleSchool,

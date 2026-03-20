@@ -48,6 +48,7 @@ export interface Listing {
   agentPhoto?: string;
   agentTeam?: string;
   brokerageName?: string;
+  schedulingUrl?: string;        // Calendly / Cal.com / Acuity link for inline scheduler
 
   // MLS
   mlsNumber?: string;

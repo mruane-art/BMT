@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Gallery from '@/components/listing/Gallery';
 import MapEmbed from '@/components/listing/MapEmbed';
 import ShowingRequestForm from '@/components/listing/ShowingRequestForm';
+import CalendlyEmbed from '@/components/listing/CalendlyEmbed';
 
 // Always render dynamically so newly created listings are immediately accessible
 export const dynamic = 'force-dynamic';
@@ -218,8 +219,12 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
 
           {/* Right: Sidebar */}
           <div className="space-y-8" id="contact">
-            {/* Showing Request Form */}
-            <ShowingRequestForm propertyAddress={fullAddress} />
+            {/* Scheduler — Calendly embed if URL set, otherwise contact form */}
+            {listing.schedulingUrl ? (
+              <CalendlyEmbed url={listing.schedulingUrl} />
+            ) : (
+              <ShowingRequestForm propertyAddress={fullAddress} />
+            )}
 
             {/* Agent Card */}
             <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">

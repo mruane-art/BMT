@@ -74,6 +74,7 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
     agentPhoto: '',
     agentTeam: '',
     brokerageName: '',
+    schedulingUrl: '',
     mlsNumber: '',
     elementarySchool: '',
     middleSchool: '',
@@ -414,6 +415,16 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
                   )}
                 </div>
               </div>
+            </Field>
+            <Field label="Scheduling / Calendly URL">
+              <input
+                className={inputCls}
+                type="url"
+                value={form.schedulingUrl || ''}
+                onChange={(e) => set('schedulingUrl', e.target.value)}
+                placeholder="https://calendly.com/your-name/showing"
+              />
+              <p className="text-xs text-gray-400 mt-1">Paste your Calendly, Cal.com, or Acuity link — visitors will book directly on the property page.</p>
             </Field>
           </div>
         </Section>
