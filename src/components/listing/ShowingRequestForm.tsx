@@ -4,10 +4,11 @@ import { useState } from 'react';
 
 interface ShowingRequestFormProps {
   propertyAddress: string;
-  formspreeId?: string;
+  agentEmail?: string;
+  agentPhone?: string;
 }
 
-export default function ShowingRequestForm({ propertyAddress, formspreeId = 'mvzwweoe' }: ShowingRequestFormProps) {
+export default function ShowingRequestForm({ propertyAddress, agentEmail, agentPhone }: ShowingRequestFormProps) {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [form, setForm] = useState({
     name: '',
@@ -23,10 +24,10 @@ export default function ShowingRequestForm({ propertyAddress, formspreeId = 'mvz
     setStatus('submitting');
 
     try {
-      const res = await fetch(`https://formspree.io/f/${formspreeId}`, {
+      const res = await fetch('/api/contact', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ ...form, property: propertyAddress }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, property: propertyAddress, agentEmail, agentPhone }),
       });
       if (res.ok) {
         setStatus('success');

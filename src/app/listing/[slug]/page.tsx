@@ -223,7 +223,11 @@ export default async function ListingPage({ params }: { params: Promise<{ slug: 
             {listing.schedulingUrl ? (
               <CalendlyEmbed url={listing.schedulingUrl} />
             ) : (
-              <ShowingRequestForm propertyAddress={fullAddress} />
+              <ShowingRequestForm
+                propertyAddress={fullAddress}
+                agentEmail={listing.agentEmail}
+                agentPhone={listing.agentPhone}
+              />
             )}
 
             {/* Agent Card */}
