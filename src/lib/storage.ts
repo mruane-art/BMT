@@ -41,12 +41,21 @@ const LISTINGS_BLOB_PATH = 'data/listings.json';
 
 async function blobGetAll(): Promise<Listing[]> {
   try {
-    const { list } = await import('@vercel/blob');
+    const { get, list } = await import('@vercel/blob');
     const { blobs } = await list({ prefix: LISTINGS_BLOB_PATH });
     const blob = blobs.find((b) => b.pathname === LISTINGS_BLOB_PATH);
     if (!blob) return [];
-    const res = await fetch(blob.url, { cache: 'no-store' });
-    return res.json();
+    const result = await get(blob.pathname, { access: 'private' });
+    if (!result || result.statusCode !== 200 || !result.stream) return [];
+    const reader = result.stream.getReader();
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+    const text = Buffer.concat(chunks).toString('utf-8');
+    return JSON.parse(text);
   } catch {
     return [];
   }
@@ -54,14 +63,12 @@ async function blobGetAll(): Promise<Listing[]> {
 
 async function blobWriteAll(listings: Listing[]): Promise<void> {
   const { put, list, del } = await import('@vercel/blob');
-  // Delete all existing listings.json blobs first — Vercel Blob keeps old
-  // versions when addRandomSuffix:false is used, causing stale reads.
   const { blobs } = await list({ prefix: LISTINGS_BLOB_PATH });
   if (blobs.length > 0) {
     await del(blobs.map((b) => b.url));
   }
   await put(LISTINGS_BLOB_PATH, JSON.stringify(listings, null, 2), {
-    access: 'public',
+    access: 'private',
     contentType: 'application/json',
     addRandomSuffix: false,
   });
