@@ -96,21 +96,13 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold tracking-tight">Property Listings</h1>
             <p className="text-white/60 text-sm mt-0.5">Single-property landing pages dashboard</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/agent-dashboard"
-              className="px-5 py-2.5 rounded-lg font-semibold text-sm transition hover:opacity-90 border border-white/30 text-white"
-            >
-              Agent Hub
-            </Link>
-            <button
-              onClick={() => setModal('create')}
-              className="px-6 py-2.5 rounded-lg font-semibold text-sm transition hover:opacity-90"
-              style={{ backgroundColor: '#c9a84c', color: '#1a2744' }}
-            >
-              + New Listing
-            </button>
-          </div>
+          <button
+            onClick={() => setModal('create')}
+            className="px-6 py-2.5 rounded-lg font-semibold text-sm transition hover:opacity-90"
+            style={{ backgroundColor: '#c9a84c', color: '#1a2744' }}
+          >
+            + New Listing
+          </button>
         </div>
       </header>
 
