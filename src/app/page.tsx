@@ -211,6 +211,14 @@ export default function Dashboard() {
                     >
                       View Page
                     </Link>
+                    <Link
+                      href={`/listing/${listing.slug}/marketing`}
+                      target="_blank"
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition hover:opacity-90"
+                      style={{ backgroundColor: '#c9a84c', color: '#1a2744' }}
+                    >
+                      Marketing Report
+                    </Link>
                     <button
                       onClick={() => copyLink(listing.slug)}
                       className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:border-amber-400 hover:text-amber-600 transition"
@@ -261,6 +269,14 @@ export default function Dashboard() {
                     style={{ backgroundColor: '#1a2744' }}
                   >
                     View
+                  </Link>
+                  <Link
+                    href={`/listing/${listing.slug}/marketing`}
+                    target="_blank"
+                    className="px-4 py-1.5 text-xs font-semibold rounded-lg"
+                    style={{ backgroundColor: '#c9a84c', color: '#1a2744' }}
+                  >
+                    Marketing
                   </Link>
                   <button
                     onClick={() => copyLink(listing.slug)}
