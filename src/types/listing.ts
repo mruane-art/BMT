@@ -1,3 +1,67 @@
+export interface SocialPost {
+  platform: 'facebook' | 'instagram' | 'twitter' | 'linkedin' | 'tiktok' | 'youtube' | 'pinterest' | 'other';
+  postUrl?: string;
+  postDate?: string;
+  description?: string;
+  reach?: number;
+  likes?: number;
+  shares?: number;
+  comments?: number;
+  platformLabel?: string; // for 'other'
+}
+
+export interface OpenHouse {
+  date: string;
+  startTime: string;
+  endTime: string;
+  attendance?: number;
+  notes?: string;
+}
+
+export interface OnlineListing {
+  site: 'zillow' | 'realtor' | 'redfin' | 'homes' | 'trulia' | 'mls' | 'other';
+  siteName?: string;
+  url?: string;
+  views?: number;
+  active: boolean;
+}
+
+export interface MarketingActivity {
+  date: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  category?: 'digital' | 'social' | 'print' | 'event' | 'other';
+}
+
+export interface MarketingData {
+  listingDate?: string;
+  sellerName?: string;
+  agentMessage?: string;
+
+  // Manual stats
+  totalViews?: number;
+  totalInquiries?: number;
+  totalShowings?: number;
+  totalReach?: number;
+
+  // Social media
+  socialPosts?: SocialPost[];
+
+  // Open houses
+  openHouses?: OpenHouse[];
+
+  // Online listings / syndication
+  onlineListings?: OnlineListing[];
+
+  // Marketing activities timeline
+  activities?: MarketingActivity[];
+
+  // Showing service (ShowingTime, ShowingSmart, etc.)
+  showingServiceUrl?: string;
+  showingServiceName?: string;
+}
+
 export interface Listing {
   id: string;
   slug: string;
@@ -64,4 +128,7 @@ export interface Listing {
 
   // Taxes
   annualTaxes?: number;
+
+  // Marketing report data
+  marketing?: MarketingData;
 }

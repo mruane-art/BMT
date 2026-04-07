@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Listing } from '@/types/listing';
+import { Listing, SocialPost, OpenHouse, OnlineListing, MarketingActivity, MarketingData } from '@/types/listing';
 import PhotoUpload from './PhotoUpload';
 import MLSImport from './MLSImport';
 
@@ -41,7 +41,7 @@ const selectCls = `${inputCls} bg-white`;
 
 export default function ListingForm({ initial, onSave, onCancel, isEdit }: ListingFormProps) {
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'photos' | 'agent'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'photos' | 'agent' | 'marketing'>('basic');
   const [form, setForm] = useState<FormData>({
     status: 'draft',
     address: '',
@@ -76,6 +76,7 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
     brokerageName: '',
     schedulingUrl: '',
     mlsNumber: '',
+    marketing: undefined,
     elementarySchool: '',
     middleSchool: '',
     highSchool: '',
@@ -137,11 +138,89 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
     }
   };
 
+  const setMarketing = (field: keyof MarketingData, value: unknown) => {
+    setForm((prev) => ({
+      ...prev,
+      marketing: { ...(prev.marketing || {}), [field]: value },
+    }));
+  };
+
+  const m = form.marketing || {};
+
+  const addSocialPost = () => {
+    const posts: SocialPost[] = [...(m.socialPosts || []), { platform: 'facebook', postUrl: '', postDate: '', description: '' }];
+    setMarketing('socialPosts', posts);
+  };
+
+  const updateSocialPost = (i: number, field: keyof SocialPost, value: unknown) => {
+    const posts = [...(m.socialPosts || [])];
+    posts[i] = { ...posts[i], [field]: value };
+    setMarketing('socialPosts', posts);
+  };
+
+  const removeSocialPost = (i: number) => {
+    const posts = [...(m.socialPosts || [])];
+    posts.splice(i, 1);
+    setMarketing('socialPosts', posts);
+  };
+
+  const addOpenHouse = () => {
+    const ohs: OpenHouse[] = [...(m.openHouses || []), { date: '', startTime: '10:00', endTime: '12:00', attendance: undefined, notes: '' }];
+    setMarketing('openHouses', ohs);
+  };
+
+  const updateOpenHouse = (i: number, field: keyof OpenHouse, value: unknown) => {
+    const ohs = [...(m.openHouses || [])];
+    ohs[i] = { ...ohs[i], [field]: value };
+    setMarketing('openHouses', ohs);
+  };
+
+  const removeOpenHouse = (i: number) => {
+    const ohs = [...(m.openHouses || [])];
+    ohs.splice(i, 1);
+    setMarketing('openHouses', ohs);
+  };
+
+  const addOnlineListing = () => {
+    const ol: OnlineListing[] = [...(m.onlineListings || []), { site: 'zillow', url: '', views: undefined, active: true }];
+    setMarketing('onlineListings', ol);
+  };
+
+  const updateOnlineListing = (i: number, field: keyof OnlineListing, value: unknown) => {
+    const ol = [...(m.onlineListings || [])];
+    ol[i] = { ...ol[i], [field]: value };
+    setMarketing('onlineListings', ol);
+  };
+
+  const removeOnlineListing = (i: number) => {
+    const ol = [...(m.onlineListings || [])];
+    ol.splice(i, 1);
+    setMarketing('onlineListings', ol);
+  };
+
+  const addActivity = () => {
+    const acts: MarketingActivity[] = [...(m.activities || []), { date: '', title: '', description: '', completed: true, category: 'digital' }];
+    setMarketing('activities', acts);
+  };
+
+  const updateActivity = (i: number, field: keyof MarketingActivity, value: unknown) => {
+    const acts = [...(m.activities || [])];
+    acts[i] = { ...acts[i], [field]: value };
+    setMarketing('activities', acts);
+  };
+
+  const removeActivity = (i: number) => {
+    const acts = [...(m.activities || [])];
+    acts.splice(i, 1);
+    setMarketing('activities', acts);
+  };
+
   const tabs = [
     { id: 'basic', label: 'Address & Price' },
     { id: 'details', label: 'Details' },
     { id: 'photos', label: `Photos (${form.photos.length})` },
     { id: 'agent', label: 'Agent Info' },
+    { id: 'marketing', label: 'Marketing' },
   ] as const;
 
   return (
@@ -428,6 +507,224 @@ export default function ListingForm({ initial, onSave, onCancel, isEdit }: Listi
             </Field>
           </div>
         </Section>
+      )}
+
+      {activeTab === 'marketing' && (
+        <div className="space-y-6">
+          <Section title="Seller & Report Info">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Seller Name (for report)">
+                <input className={inputCls} value={m.sellerName || ''} onChange={(e) => setMarketing('sellerName', e.target.value)} placeholder="John & Jane Smith" />
+              </Field>
+              <Field label="Listing Date">
+                <input className={inputCls} type="date" value={m.listingDate || ''} onChange={(e) => setMarketing('listingDate', e.target.value)} />
+              </Field>
+              <div className="md:col-span-2">
+                <Field label="Agent Message to Seller">
+                  <textarea
+                    className={`${inputCls} resize-none`}
+                    rows={4}
+                    value={m.agentMessage || ''}
+                    onChange={(e) => setMarketing('agentMessage', e.target.value)}
+                    placeholder="Hi John & Jane, here's a summary of everything we've done to market your home…"
+                  />
+                </Field>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Marketing Stats (manually entered)">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Field label="Total Online Views">
+                <input className={inputCls} type="number" value={m.totalViews || ''} onChange={(e) => setMarketing('totalViews', parseInt(e.target.value) || undefined)} placeholder="0" />
+              </Field>
+              <Field label="Total Inquiries">
+                <input className={inputCls} type="number" value={m.totalInquiries || ''} onChange={(e) => setMarketing('totalInquiries', parseInt(e.target.value) || undefined)} placeholder="0" />
+              </Field>
+              <Field label="Total Showings">
+                <input className={inputCls} type="number" value={m.totalShowings || ''} onChange={(e) => setMarketing('totalShowings', parseInt(e.target.value) || undefined)} placeholder="0" />
+              </Field>
+              <Field label="Total Social Reach">
+                <input className={inputCls} type="number" value={m.totalReach || ''} onChange={(e) => setMarketing('totalReach', parseInt(e.target.value) || undefined)} placeholder="0" />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Showing Service (ShowingTime, ShowingSmart, etc.)">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Field label="Service Name">
+                <input className={inputCls} value={m.showingServiceName || ''} onChange={(e) => setMarketing('showingServiceName', e.target.value)} placeholder="ShowingTime" />
+              </Field>
+              <Field label="Link / Portal URL">
+                <input className={inputCls} type="url" value={m.showingServiceUrl || ''} onChange={(e) => setMarketing('showingServiceUrl', e.target.value)} placeholder="https://showingtime.com/…" />
+              </Field>
+            </div>
+          </Section>
+
+          <Section title="Online Presence & Syndication">
+            <p className="text-xs text-gray-400 mb-4">Add every website where this listing appears.</p>
+            <div className="space-y-3">
+              {(m.onlineListings || []).map((ol, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-start bg-gray-50 rounded-lg p-3">
+                  <div className="col-span-3">
+                    <select className={selectCls} value={ol.site} onChange={(e) => updateOnlineListing(i, 'site', e.target.value)}>
+                      <option value="zillow">Zillow</option>
+                      <option value="realtor">Realtor.com</option>
+                      <option value="redfin">Redfin</option>
+                      <option value="homes">Homes.com</option>
+                      <option value="trulia">Trulia</option>
+                      <option value="mls">MLS</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  {ol.site === 'other' && (
+                    <div className="col-span-2">
+                      <input className={inputCls} value={ol.siteName || ''} onChange={(e) => updateOnlineListing(i, 'siteName', e.target.value)} placeholder="Site name" />
+                    </div>
+                  )}
+                  <div className={ol.site === 'other' ? 'col-span-4' : 'col-span-6'}>
+                    <input className={inputCls} type="url" value={ol.url || ''} onChange={(e) => updateOnlineListing(i, 'url', e.target.value)} placeholder="https://…" />
+                  </div>
+                  <div className="col-span-2">
+                    <input className={inputCls} type="number" value={ol.views || ''} onChange={(e) => updateOnlineListing(i, 'views', parseInt(e.target.value) || undefined)} placeholder="Views" />
+                  </div>
+                  <div className="col-span-1 flex items-center justify-end">
+                    <button type="button" onClick={() => removeOnlineListing(i)} className="text-red-400 hover:text-red-600 text-lg font-bold">×</button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addOnlineListing} className="text-sm font-medium px-4 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition w-full">
+                + Add Online Listing
+              </button>
+            </div>
+          </Section>
+
+          <Section title="Social Media Posts">
+            <p className="text-xs text-gray-400 mb-4">Track every social media post promoting this listing.</p>
+            <div className="space-y-4">
+              {(m.socialPosts || []).map((post, i) => (
+                <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Platform</label>
+                        <select className={selectCls} value={post.platform} onChange={(e) => updateSocialPost(i, 'platform', e.target.value)}>
+                          <option value="facebook">Facebook</option>
+                          <option value="instagram">Instagram</option>
+                          <option value="twitter">Twitter / X</option>
+                          <option value="linkedin">LinkedIn</option>
+                          <option value="tiktok">TikTok</option>
+                          <option value="youtube">YouTube</option>
+                          <option value="pinterest">Pinterest</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date Posted</label>
+                        <input className={inputCls} type="date" value={post.postDate || ''} onChange={(e) => updateSocialPost(i, 'postDate', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Reach / Impressions</label>
+                        <input className={inputCls} type="number" value={post.reach || ''} onChange={(e) => updateSocialPost(i, 'reach', parseInt(e.target.value) || undefined)} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Likes / Reactions</label>
+                        <input className={inputCls} type="number" value={post.likes || ''} onChange={(e) => updateSocialPost(i, 'likes', parseInt(e.target.value) || undefined)} placeholder="0" />
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => removeSocialPost(i)} className="text-red-400 hover:text-red-600 text-xl font-bold ml-3 self-start mt-6">×</button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Post URL</label>
+                      <input className={inputCls} type="url" value={post.postUrl || ''} onChange={(e) => updateSocialPost(i, 'postUrl', e.target.value)} placeholder="https://…" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</label>
+                      <input className={inputCls} value={post.description || ''} onChange={(e) => updateSocialPost(i, 'description', e.target.value)} placeholder="Just Listed post with carousel…" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addSocialPost} className="text-sm font-medium px-4 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition w-full">
+                + Add Social Media Post
+              </button>
+            </div>
+          </Section>
+
+          <Section title="Open Houses">
+            <div className="space-y-3">
+              {(m.openHouses || []).map((oh, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-start bg-gray-50 rounded-lg p-3">
+                  <div className="col-span-3">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date</label>
+                    <input className={inputCls} type="date" value={oh.date || ''} onChange={(e) => updateOpenHouse(i, 'date', e.target.value)} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Start</label>
+                    <input className={inputCls} type="time" value={oh.startTime || ''} onChange={(e) => updateOpenHouse(i, 'startTime', e.target.value)} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">End</label>
+                    <input className={inputCls} type="time" value={oh.endTime || ''} onChange={(e) => updateOpenHouse(i, 'endTime', e.target.value)} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Attendance</label>
+                    <input className={inputCls} type="number" value={oh.attendance || ''} onChange={(e) => updateOpenHouse(i, 'attendance', parseInt(e.target.value) || undefined)} placeholder="—" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</label>
+                    <input className={inputCls} value={oh.notes || ''} onChange={(e) => updateOpenHouse(i, 'notes', e.target.value)} placeholder="Optional" />
+                  </div>
+                  <div className="col-span-1 flex items-end pb-2 justify-end">
+                    <button type="button" onClick={() => removeOpenHouse(i)} className="text-red-400 hover:text-red-600 text-xl font-bold">×</button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addOpenHouse} className="text-sm font-medium px-4 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition w-full">
+                + Add Open House
+              </button>
+            </div>
+          </Section>
+
+          <Section title="Marketing Activities Timeline">
+            <p className="text-xs text-gray-400 mb-4">Record every marketing action taken for this listing.</p>
+            <div className="space-y-3">
+              {(m.activities || []).map((act, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-start bg-gray-50 rounded-lg p-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date</label>
+                    <input className={inputCls} type="date" value={act.date || ''} onChange={(e) => updateActivity(i, 'date', e.target.value)} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Category</label>
+                    <select className={selectCls} value={act.category || 'digital'} onChange={(e) => updateActivity(i, 'category', e.target.value)}>
+                      <option value="digital">Digital</option>
+                      <option value="social">Social</option>
+                      <option value="print">Print</option>
+                      <option value="event">Event</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div className="col-span-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Activity</label>
+                    <input className={inputCls} value={act.title || ''} onChange={(e) => updateActivity(i, 'title', e.target.value)} placeholder="e.g. MLS Listed, Facebook Ad, Just Listed Mailer…" />
+                  </div>
+                  <div className="col-span-3">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Notes</label>
+                    <input className={inputCls} value={act.description || ''} onChange={(e) => updateActivity(i, 'description', e.target.value)} placeholder="Optional details" />
+                  </div>
+                  <div className="col-span-1 flex items-end pb-2 justify-end">
+                    <button type="button" onClick={() => removeActivity(i)} className="text-red-400 hover:text-red-600 text-xl font-bold">×</button>
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addActivity} className="text-sm font-medium px-4 py-2 rounded-lg border border-dashed border-gray-300 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition w-full">
+                + Add Activity
+              </button>
+            </div>
+          </Section>
+        </div>
       )}
 
       {/* Actions */}
