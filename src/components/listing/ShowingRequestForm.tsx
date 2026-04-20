@@ -28,12 +28,24 @@ export default function ShowingRequestForm({ propertyAddress, agentEmail, agentP
     setStatus('submitting');
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('https://formspree.io/f/mvzwweoe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, property: propertyAddress, agentEmail, agentPhone }),
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          preferredDate: form.date,
+          preferredTime: form.time,
+          message: form.message,
+          property: propertyAddress,
+          _replyto: form.email,
+          _subject: `Showing Request — ${propertyAddress}`,
+        }),
       });
-      if (res.ok) {
+
+      const data = await res.json();
+      if (res.ok && !data.errors) {
         setStatus('success');
         setForm({ name: '', email: '', phone: '', date: '', time: '', message: '' });
       } else {
