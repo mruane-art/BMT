@@ -49,90 +49,7 @@ function mapRow(row: Record<string, string>): Record<string, string> {
   return result;
 }
 
-function extractFromPdfText(rawText: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  const lines = rawText.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
-  const fullText = rawText;
 
-  for (const line of lines) {
-    const m = line.match(/^([A-Za-z#\s/()&,.']+?):\s*(.+)$/);
-    if (m) {
-      const mapped = FIELD_MAP[m[1].trim().toLowerCase()];
-      if (mapped && m[2].trim()) result[mapped] = m[2].trim();
-    }
-  }
-
-  const patterns: Array<[RegExp, string]> = [
-    [/list\s*price[:\s]+\$?([\d,]+)/i, 'price'],
-    [/\$\s*([\d,]+)\s*\n/m, 'price'],
-    [/beds?\s*:\s*(\d+)/i, 'bedrooms'],
-    [/bedrooms?\s*:\s*(\d+)/i, 'bedrooms'],
-    [/baths?\s*:\s*(\d+)\s*\//i, 'bathrooms'],
-    [/full\s*baths?\s*:\s*(\d+)/i, 'bathrooms'],
-    [/above\s+grade\s+fin\s+sqft\s*:\s*([\d,]+)/i, 'sqft'],
-    [/sq\.?\s*ft\.?\s*:\s*([\d,]+)/i, 'sqft'],
-    [/living\s+area\s*:\s*([\d,]+)/i, 'sqft'],
-    [/year\s+built\s*:\s*(\d{4})/i, 'yearBuilt'],
-    [/mls\s*#\s*:\s*([A-Z0-9-]+)/i, 'mlsNumber'],
-    [/mls\s+number\s*:\s*([A-Z0-9-]+)/i, 'mlsNumber'],
-    [/lot\s+size\s*:\s*([^\n]+)/i, 'lotSize'],
-    [/hoa\s+fee\s*:\s*\$?([\d,.]+)/i, 'hoaFee'],
-    [/tax\s+annual\s+amt[^:]*:\s*\$?([\d,]+)/i, 'annualTaxes'],
-    [/annual\s+taxes?\s*:\s*\$?([\d,]+)/i, 'annualTaxes'],
-    [/elementary\s+school\s*:\s*([^\n]+)/i, 'elementarySchool'],
-    [/middle\s+school\s*:\s*([^\n]+)/i, 'middleSchool'],
-    [/high\s+school\s*:\s*([^\n]+)/i, 'highSchool'],
-    [/zip(?:\s*code)?\s*:\s*(\d{5})/i, 'zip'],
-    [/county\s*:\s*([A-Za-z\s]+?)(?:,|\n)/i, 'county'],
-  ];
-  for (const [pattern, field] of patterns) {
-    if (result[field]) continue;
-    const m = fullText.match(pattern);
-    if (m?.[1]) result[field] = m[1].trim();
-  }
-
-  for (const line of lines) {
-    if (/^\d+\s+[A-Za-z]/.test(line) && line.length < 120) {
-      const addrMatch = line.match(/^(.+?),\s*(.+?),\s*([A-Z]{2})\s+(\d{5})/);
-      if (addrMatch) {
-        if (!result.address) result.address = addrMatch[1].trim();
-        if (!result.city) result.city = addrMatch[2].trim();
-        if (!result.state) result.state = addrMatch[3].trim();
-        if (!result.zip) result.zip = addrMatch[4].trim();
-      } else if (!result.address) {
-        result.address = line;
-      }
-      break;
-    }
-  }
-
-  if (!result.description) {
-    const remarksMatch = fullText.match(/public\s+remarks?\s*:\s*([\s\S]+?)(?=\n[A-Z][a-z]+\s+(?:Info|Details|Remarks?)|\n\n|$)/i);
-    if (remarksMatch?.[1]) result.description = remarksMatch[1].replace(/\s+/g, ' ').trim();
-  }
-
-  return result;
-}
-
-async function parsePdfClientSide(file: File): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const textParts: string[] = [];
-
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ('str' in item ? item.str : ''))
-      .join(' ');
-    textParts.push(pageText);
-  }
-
-  return textParts.join('\n');
-}
 
 export default function MLSImport({ onImport }: MLSImportProps) {
   const [status, setStatus] = useState<'idle' | 'parsing' | 'error'>('idle');
@@ -148,13 +65,9 @@ export default function MLSImport({ onImport }: MLSImportProps) {
 
       try {
         if (isPDF) {
-          const rawText = await parsePdfClientSide(file);
-          const mapped = extractFromPdfText(rawText);
-          if (Object.keys(mapped).length === 0) {
-            throw new Error('No MLS fields found in this PDF. Try a CSV export instead.');
-          }
-          setStatus('idle');
-          onImport(mapped);
+          setStatus('error');
+          setErrorMsg('PDF import is not supported. Please export your listing as a CSV from Bright MLS: Search Results → Export → Spreadsheet (CSV).');
+          return;
         } else {
           Papa.parse(file, {
             header: true,
@@ -192,7 +105,6 @@ export default function MLSImport({ onImport }: MLSImportProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
       'text/csv': ['.csv'],
       'application/vnd.ms-excel': ['.xls'],
       'text/plain': ['.txt'],
@@ -222,8 +134,8 @@ export default function MLSImport({ onImport }: MLSImportProps) {
           <div>
             <div className="text-3xl mb-2">📋</div>
             <p className="text-gray-600 font-medium">Import from MLS</p>
-            <p className="text-gray-400 text-sm mt-1">Drag & drop a PDF or CSV export from your MLS</p>
-            <p className="text-gray-400 text-xs mt-1">Supports PDF · CSV · XLS · auto-maps common fields</p>
+            <p className="text-gray-400 text-sm mt-1">Drag & drop a CSV export from Bright MLS</p>
+            <p className="text-gray-400 text-xs mt-1">In Bright MLS: Search Results → Export → Spreadsheet (CSV)</p>
           </div>
         )}
       </div>
