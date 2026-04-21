@@ -7,28 +7,37 @@ export async function POST(req: NextRequest) {
   const files = formData.getAll('files') as File[];
   const urls: string[] = [];
 
-  const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dvtdzehn9';
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'bmt-listings';
 
-  if (useBlob) {
-    // ---------------------------------------------------------------------------
-    // Vercel Blob storage — permanent CDN-hosted URLs, works on Vercel deployment
-    // ---------------------------------------------------------------------------
-    const { put } = await import('@vercel/blob');
-
+  if (cloudName && uploadPreset) {
+    // -------------------------------------------------------------------------
+    // Cloudinary — free CDN image hosting, no extra Vercel config needed
+    // -------------------------------------------------------------------------
     for (const file of files) {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const filename = `listings/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const bytes = await file.arrayBuffer();
-      const blob = await put(filename, bytes, {
-        access: 'public',
-        contentType: file.type || 'image/jpeg',
-      });
-      urls.push(blob.url);
+      const data = new FormData();
+      data.append('file', file);
+      data.append('upload_preset', uploadPreset);
+      data.append('folder', 'bmt-listings');
+
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        { method: 'POST', body: data }
+      );
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('Cloudinary upload error:', err);
+        return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+      }
+
+      const result = await res.json();
+      urls.push(result.secure_url);
     }
   } else {
-    // ---------------------------------------------------------------------------
-    // Local filesystem — writes to /public/uploads for local development
-    // ---------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Local filesystem — for development only
+    // -------------------------------------------------------------------------
     const uploadDir = path.join(process.cwd(), 'public', 'uploads');
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 

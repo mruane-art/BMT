@@ -8,29 +8,6 @@ interface PhotoUploadProps {
   onChange: (photos: string[]) => void;
 }
 
-/** Resize & compress an image file to a JPEG data URL. */
-function compressImage(file: File, maxWidth = 1200, quality = 0.65): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const img = document.createElement('img');
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('canvas unavailable')); return; }
-      ctx.drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(objectUrl);
-      resolve(canvas.toDataURL('image/jpeg', quality));
-    };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('image load failed')); };
-    img.src = objectUrl;
-  });
-}
-
 export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -40,14 +17,14 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
       setUploading(true);
       setUploadError('');
       try {
-        const newUrls: string[] = [];
-        for (const file of acceptedFiles) {
-          const url = await compressImage(file);
-          newUrls.push(url);
-        }
-        onChange([...photos, ...newUrls]);
+        const formData = new FormData();
+        for (const file of acceptedFiles) formData.append('files', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('Upload failed');
+        const { urls } = await res.json();
+        onChange([...photos, ...urls]);
       } catch {
-        setUploadError('Could not process one or more photos. Please try again.');
+        setUploadError('Could not upload photos. Please try again.');
       } finally {
         setUploading(false);
       }
@@ -61,9 +38,7 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
     multiple: true,
   });
 
-  const removePhoto = (idx: number) => {
-    onChange(photos.filter((_, i) => i !== idx));
-  };
+  const removePhoto = (idx: number) => onChange(photos.filter((_, i) => i !== idx));
 
   const movePhoto = (from: number, to: number) => {
     const arr = [...photos];
@@ -84,7 +59,7 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
         {uploading ? (
           <div className="flex items-center justify-center gap-2 text-gray-500">
             <div className="animate-spin rounded-full h-5 w-5 border-2 border-amber-400 border-t-transparent" />
-            Processing photos…
+            Uploading photos…
           </div>
         ) : isDragActive ? (
           <p className="text-amber-600 font-medium">Drop photos here…</p>
@@ -97,9 +72,7 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
         )}
       </div>
 
-      {uploadError && (
-        <p className="text-sm text-red-600 text-center">{uploadError}</p>
-      )}
+      {uploadError && <p className="text-sm text-red-600 text-center">{uploadError}</p>}
 
       {photos.length > 0 && (
         <div>
@@ -111,39 +84,18 @@ export default function PhotoUpload({ photos, onChange }: PhotoUploadProps) {
               <div key={idx} className="relative group rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
                 <div className="relative w-full" style={{ paddingBottom: '75%' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo}
-                    alt={`Photo ${idx + 1}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                  <img src={photo} alt={`Photo ${idx + 1}`} className="absolute inset-0 w-full h-full object-cover" />
                 </div>
                 {idx === 0 && (
-                  <div className="absolute top-1 left-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded font-medium">
-                    Hero
-                  </div>
+                  <div className="absolute top-1 left-1 bg-amber-500 text-white text-xs px-1.5 py-0.5 rounded font-medium">Hero</div>
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
                   {idx > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => movePhoto(idx, idx - 1)}
-                      className="bg-white text-gray-800 rounded p-1 text-xs hover:bg-amber-50"
-                      title="Move left"
-                    >←</button>
+                    <button type="button" onClick={() => movePhoto(idx, idx - 1)} className="bg-white text-gray-800 rounded p-1 text-xs hover:bg-amber-50" title="Move left">←</button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(idx)}
-                    className="bg-red-500 text-white rounded p-1 text-xs hover:bg-red-600"
-                    title="Remove"
-                  >✕</button>
+                  <button type="button" onClick={() => removePhoto(idx)} className="bg-red-500 text-white rounded p-1 text-xs hover:bg-red-600" title="Remove">✕</button>
                   {idx < photos.length - 1 && (
-                    <button
-                      type="button"
-                      onClick={() => movePhoto(idx, idx + 1)}
-                      className="bg-white text-gray-800 rounded p-1 text-xs hover:bg-amber-50"
-                      title="Move right"
-                    >→</button>
+                    <button type="button" onClick={() => movePhoto(idx, idx + 1)} className="bg-white text-gray-800 rounded p-1 text-xs hover:bg-amber-50" title="Move right">→</button>
                   )}
                 </div>
               </div>
