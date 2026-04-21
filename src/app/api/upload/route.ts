@@ -7,8 +7,8 @@ export async function POST(req: NextRequest) {
   const files = formData.getAll('files') as File[];
   const urls: string[] = [];
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dvtdzehn9';
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'bmt-listings';
 
   if (cloudName && uploadPreset) {
     // -------------------------------------------------------------------------
